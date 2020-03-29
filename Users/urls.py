@@ -3,8 +3,7 @@ from Users import views
 
 
 urlpatterns = [
-    url(r'^register/$', views.RegisterView.as_view()),
-    url(r'^users/$', views.UserListView.as_view()),
-    url(r'^users/(?P<pk>\d+)/$', views.UserDetailView.as_view()),
-    url(r'^users/(?P<pk>\d+)/change_password/$', views.ChangePasswordView.as_view()),
+    url(r'^profiles/$', views.ProfilesListView.as_view()),
+    url(r'^profiles/(?P<pk>\d+)/$', views.ProfileDetailView.as_view()),
+    url(r'^profiles/(?P<pk>\d+)/add_awards/$', views.AddNewAwardView.as_view()),
 ]

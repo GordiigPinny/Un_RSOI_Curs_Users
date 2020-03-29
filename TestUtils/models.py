@@ -33,7 +33,7 @@ class BaseTestCase(TestCase):
             return json_response
 
     def get_response_and_check_status(self, url: str, data: dict = {}, expected_status_code: int = 200,
-                                      auth: bool = True, token: Union[str, None] = None):
+                                      auth: bool = False, token: Union[str, None] = None):
         """
         GET-запрос на сервер с проверкой статус-кода
         :param url: Урла куда стучимся
@@ -52,7 +52,7 @@ class BaseTestCase(TestCase):
         return json
 
     def post_response_and_check_status(self, url: str, data: dict = {}, expected_status_code: int = 201,
-                                       auth: bool = True, token: Union[str, None] = None):
+                                       auth: bool = False, token: Union[str, None] = None):
         """
         POST-запрос на сервер с проверкой статус-кода
         :param url: Урла куда стучимся
@@ -71,7 +71,7 @@ class BaseTestCase(TestCase):
         return json
 
     def patch_response_and_check_status(self, url: str, data: dict = {}, expected_status_code: int = 202,
-                                        auth: bool = True, token: Union[str, None] = None):
+                                        auth: bool = False, token: Union[str, None] = None):
         """
         PATCH-запрос на сервер с проверкой статус-кода
         :param url: Урла куда стучимся
@@ -90,7 +90,7 @@ class BaseTestCase(TestCase):
         return json
 
     def delete_response_and_check_status(self, url: str, data: dict = {}, expected_status_code: int = 204,
-                                         auth: bool = True, token: Union[str, None] = None):
+                                         auth: bool = False, token: Union[str, None] = None):
         """
         DELETE-запрос на сервер с проверкой статус-кода
         :param url: Урла куда стучимся
