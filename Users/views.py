@@ -1,83 +1,62 @@
-from rest_framework import status
-from rest_framework.generics import ListAPIView
-from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.views import APIView, Response, Request
-from django.contrib.auth.models import User
-from Users.serializers import RegisterSerializer, UserSerializer, UserListSerializer
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework.pagination import LimitOffsetPagination
+from Users.models import Profile
+from Users.serializers import ProfileSerializer, ProfilesListSerializer
 
 
-class RegisterView(APIView):
+class ProfilesListView(ListCreateAPIView):
     """
-    Вьюха для регистрации
-    """
-    def post(self, request: Request):
-        s = RegisterSerializer(data=request.data)
-        if s.is_valid():
-            s.save()
-            return Response(s.data, status=status.HTTP_201_CREATED)
-        return Response(s.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class UserListView(ListAPIView):
-    """
-    Вьюха для спискового представления юзеров
+    Вьюха для спискового представления профилей
     """
     pagination_class = LimitOffsetPagination
-    serializer_class = UserListSerializer
+    serializer_class = ProfilesListSerializer
 
     def get_queryset(self):
-        return User.objects.all()
+        return Profile.objects.all()
 
 
-class UserDetailView(APIView):
+class ProfileDetailView(RetrieveUpdateDestroyAPIView):
     """
-    Вьюха для детального представления юзера
+    Вьюха для детального представления профиля
     """
-    def get(self, request: Request, pk: int):
-        try:
-            user = User.objects.get(pk=pk)
-        except User.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        serializer = UserSerializer(instance=user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    serializer_class = ProfileSerializer
 
-    def delete(self, request: Request, pk: int):
-        try:
-            user = User.objects.get(pk=pk)
-        except User.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        user.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    def get_queryset(self):
+        return Profile.objects.all()
+
+    def update(self, request, *args, **kwargs):
+        response = super().update(request, args, kwargs)
+        if response.status_code == 200:
+            response.status_code = 202
+        return response
 
 
-class ChangePasswordView(APIView):
+class AddNewAwardView(APIView):
     """
-    Вьюха для изменения пароля
+    Вьюха для добавления нового пина
     """
-    def patch(self, request: Request, pk: int):
+    def post(self, request: Request, pk: int):
         try:
-            user = User.objects.get(pk=pk)
-        except User.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-
+            profile = Profile.objects.get(pk=pk)
+        except Profile.DoesNotExist:
+            return Response(status=404)
         try:
-            old_password = request.data['old_password']
+            award_type, award_ids = request.data['award_type'], request.data['award_ids']
         except KeyError:
-            return Response({'error': 'Не передан старый пароль'}, status=status.HTTP_400_BAD_REQUEST)
-        try:
-            new_password = request.data['password']
-        except KeyError:
-            return Response({'error': 'Не передан новый пароль'}, status=status.HTTP_400_BAD_REQUEST)
-        try:
-            new_password_confirm = request.data['password_confirm']
-        except KeyError:
-            return Response({'error': 'Не передано подтверждение нового пароля'}, status=status.HTTP_400_BAD_REQUEST)
-
-        if not user.check_password(old_password):
-            return Response({'error': 'Старый пароль не совпадает с текущим'}, status=status.HTTP_403_FORBIDDEN)
-        if new_password != new_password_confirm:
-            return Response({'error': 'Пароли не совпадают'}, status=status.HTTP_400_BAD_REQUEST)
-
-        user.set_password(new_password)
-        user.save()
-        return Response(status=status.HTTP_202_ACCEPTED)
+            return Response({'error': 'Необходимые поля: "award_type", "award_ids"'}, status=400)
+        if not isinstance(award_ids, list):
+            return Response({'error': '"award_ids" должен быть массивом'}, status=400)
+        if len([x for x in award_ids if not isinstance(x, int)]) > 0:
+            return Response({'error': '"award_ids" должен быть целочисленным массивом'}, status=400)
+        if award_type == 'upin':
+            profile.unlocked_geopins += ',' + ','.join([str(x) for x in award_ids])
+        elif award_type == 'ppin':
+            profile.unlocked_pins += ',' + ','.join([str(x) for x in award_ids])
+        elif award_type == 'achievement':
+            profile.achievements += ',' + ','.join([str(x) for x in award_ids])
+        else:
+            return Response({'error': 'Допустимые типы наград: "upin", "ppin", "achievement"'}, status=400)
+        profile.save()
+        s = ProfileSerializer(profile)
+        return Response(s.data, status=201)

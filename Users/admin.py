@@ -1,5 +1,5 @@
 from django.contrib import admin
-from Users.models import UserExt
+from Users.models import Profile
 
 # Register your models here.
-admin.site.register(UserExt)
+admin.site.register(Profile)

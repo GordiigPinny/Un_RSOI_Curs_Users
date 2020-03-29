@@ -1,126 +1,126 @@
 from TestUtils.models import BaseTestCase
-from django.contrib.auth.models import User, Group
+from Users.models import Profile
 
 
-class RegisterTestCase(BaseTestCase):
+class LocalBaseTestCase(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.path_prefix = self.url_prefix + 'profiles/'
+        self.profile = Profile.objects.create(user_id=self.user.id)
+
+
+class ProfilesListTestCase(LocalBaseTestCase):
     """
-    Тесты для регистрации
+    Тест для /profiles/
     """
     def setUp(self):
         super().setUp()
-        self.path = self.url_prefix + 'register/'
+        self.path = self.path_prefix
         self.data_201 = {
-            'username': 'Hello',
-            'password': 'World',
-            'password_confirm': 'World',
+            'user_id': self.user.id + 100,
         }
         self.data_400_1 = {
-            'username': self.user_username,
-            'password': 'RaNd0m',
+            'user_id': self.user.id,
+        }
+
+    def testGet200_OK(self):
+        response = self.get_response_and_check_status(url=self.path)
+        self.fields_test(response, needed_fields=['id', 'user_id', 'profile_pic_link'], allow_extra_fields=False)
+        self.list_test(response, Profile)
+
+    def testPost201_OK(self):
+        _ = self.post_response_and_check_status(url=self.path, data=self.data_201)
+
+    def testPost400_NotUniqueUserId(self):
+        _ = self.post_response_and_check_status(url=self.path, data=self.data_400_1, expected_status_code=400)
+
+
+class ProfileTestCase(LocalBaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.path = self.path_prefix + f'{self.profile.id}/'
+        self.path_404 = self.path_prefix + f'{self.profile.id + 1000}/'
+        self.data_202 = {
+            'pin_sprite': 2,
+        }
+        self.data_400_1 = {
+            'user_id': -1,
+        }
+
+    def testGet200_OK(self):
+        response = self.get_response_and_check_status(url=self.path)
+        self.fields_test(response, needed_fields=['id', 'user_id', 'pin_sprite', 'geopin_sprite', 'created_dt',
+                                                  'unlocked_pins', 'unlocked_geopins', 'profile_pic_link',
+                                                  'achievements'],
+                         allow_extra_fields=False)
+
+    def testGet404_WrongId(self):
+        _ = self.get_response_and_check_status(url=self.path_404, expected_status_code=404)
+
+    def testPatch202_OK(self):
+        response = self.patch_response_and_check_status(url=self.path, data=self.data_202)
+
+    def testPatch400_NegativeUserId(self):
+        _ = self.patch_response_and_check_status(url=self.path, data=self.data_400_1, expected_status_code=400)
+
+    def testPatch404_WrongId(self):
+        _ = self.patch_response_and_check_status(url=self.path_404, data=self.data_202, expected_status_code=404)
+
+    def testDelete204_OK(self):
+        _ = self.delete_response_and_check_status(url=self.path)
+
+    def testDelete404_WrongId(self):
+        _ = self.delete_response_and_check_status(url=self.path_404, expected_status_code=404)
+
+
+class AddAwardTestCase(LocalBaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.path = self.path_prefix + f'{self.profile.id}/add_awards/'
+        self.data_201_1 = {
+            'award_type': 'ppin',
+            'award_ids': [2, 3]
+        }
+        self.data_201_2 = {
+            'award_type': 'upin',
+            'award_ids': [2, 3]
+        }
+        self.data_201_3 = {
+            'award_type': 'achievement',
+            'award_ids': [2, 3]
+        }
+        self.data_400_1 = {
+            'award_type': 'Not enough',
         }
         self.data_400_2 = {
-            'password': 'RaNd0M',
+            'award_type': 'no',
+            'award_ids': [2, 3]
         }
         self.data_400_3 = {
-            'username': 'RND',
-            'password': 'RaNd0m',
+            'award_type': 'ptype',
+            'award_ids': 1,
         }
 
-    def testRegisterOk(self):
-        response = self.post_response_and_check_status(url=self.path, data=self.data_201, auth=False)
-        self.fields_test(response, needed_fields=['username', 'email'], allow_extra_fields=False)
+    def testPost201_Ppin(self):
+        response = self.post_response_and_check_status(url=self.path, data=self.data_201_1)
+        for aid in self.data_201_1['award_ids']:
+            self.assertTrue(aid in response['unlocked_pins'], msg='Not all pins was added')
 
-    def testRegisterFail_ExistingUsername(self):
-        _ = self.post_response_and_check_status(url=self.path, data=self.data_400_1, expected_status_code=400,
-                                                auth=False)
+    def testPost201_Upin(self):
+        response = self.post_response_and_check_status(url=self.path, data=self.data_201_2)
+        for aid in self.data_201_2['award_ids']:
+            self.assertTrue(aid in response['unlocked_geopins'], msg='Not all pins was added')
 
-    def testRegisterFail_WrongJson(self):
-        _ = self.post_response_and_check_status(url=self.path, data=self.data_400_2, expected_status_code=400,
-                                                auth=False)
+    def testPost201_Achievement(self):
+        response = self.post_response_and_check_status(url=self.path, data=self.data_201_3)
+        for aid in self.data_201_3['award_ids']:
+            self.assertTrue(aid in response['achievements'], msg='Not all achievements was added')
 
-    def testRegisterFail_NoConfirm(self):
-        _ = self.post_response_and_check_status(url=self.path, data=self.data_400_3, expected_status_code=400,
-                                                auth=False)
+    def testPost400_WrongJSON(self):
+        _ = self.post_response_and_check_status(url=self.path, data=self.data_400_1, expected_status_code=400)
 
+    def testPost400_WrongType(self):
+        _ = self.post_response_and_check_status(url=self.path, data=self.data_400_2, expected_status_code=400)
 
-class UsersListTestCase(BaseTestCase):
-    """
-    Тест для спиского представления юзеров
-    """
-    def setUp(self):
-        super().setUp()
-        self.path = self.url_prefix + 'users/'
-
-    def testGetUsers(self):
-        response = self.get_response_and_check_status(url=self.path, auth=False)
-        self.fields_test(response, needed_fields=['id', 'username', 'profile_pic_link', 'is_superuser', 'is_moderator'],
-                         allow_extra_fields=False)
-        self.list_test(response, User)
-        self.assertEqual(len(response), 1, msg='More than one user in response')
-        self.assertEqual(response[0]['username'], self.user_username, msg='Unknown user in response')
-
-
-class UserDetailTestCase(BaseTestCase):
-    def setUp(self):
-        super().setUp()
-        self.path = self.url_prefix + f'users/{self.user.id}/'
-        self.path_404 = self.url_prefix + 'users/101010101/'
-
-    def testGetUserOk(self):
-        response = self.get_response_and_check_status(url=self.path, auth=False)
-        self.fields_test(response, needed_fields=['id', 'username', 'email', 'pin_sprite', 'geopin_sprite',
-                                                  'unlocked_pins', 'unlocked_geopins', 'profile_pic_link',
-                                                  'created_dt', 'is_superuser', 'is_moderator'],
-                         allow_extra_fields=False)
-        self.assertEqual(response['id'], self.user.id)
-
-    def testGetUserFail_404(self):
-        _ = self.get_response_and_check_status(url=self.path_404, expected_status_code=404, auth=False)
-
-    def testDeleteOk(self):
-        _ = self.delete_response_and_check_status(url=self.path, auth=False)
-
-    def testDeleteFail_404(self):
-        _ = self.delete_response_and_check_status(url=self.path_404, expected_status_code=404, auth=False)
-
-
-class ChangePasswordTestCase(BaseTestCase):
-    def setUp(self):
-        super().setUp()
-        self.path = self.url_prefix + f'users/{self.user.id}/change_password/'
-        self.path_404 = self.url_prefix + 'users/101010101/change_password/'
-        self.new_password = self.user_password + '1'
-        self.data_202 = {
-            'old_password': self.user_password,
-            'password': self.new_password,
-            'password_confirm': self.new_password,
-        }
-        self.data_400_1 = {
-            'old_password': self.user_password,
-            'password': self.new_password,
-        }
-        self.data_400_2 = {
-            'old_password': self.user_password,
-            'password': self.new_password,
-            'password_confirm': self.new_password + '1',
-        }
-        self.data_403 = {
-            'old_password': 'EHEHE',
-            'password': self.new_password,
-            'password_confirm': self.new_password,
-        }
-
-    def test202_OK(self):
-        self.patch_response_and_check_status(url=self.path, data=self.data_202, expected_status_code=202, auth=False)
-
-    def test404_WrongUserId(self):
-        self.patch_response_and_check_status(url=self.path_404, data=self.data_202, expected_status_code=404, auth=False)
-
-    def test400_WrongJSON(self):
-        self.patch_response_and_check_status(url=self.path, data=self.data_400_1, expected_status_code=400, auth=False)
-
-    def test400_WrongConfirm(self):
-        self.patch_response_and_check_status(url=self.path, data=self.data_400_2, expected_status_code=400, auth=False)
-
-    def test403_WrongOldPassword(self):
-        self.patch_response_and_check_status(url=self.path, data=self.data_403, expected_status_code=403, auth=False)
+    def testPost400_WrongIds(self):
+        _ = self.post_response_and_check_status(url=self.path, data=self.data_400_3, expected_status_code=400)

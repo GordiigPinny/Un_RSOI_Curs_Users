@@ -1,89 +1,67 @@
-from django.contrib.auth.models import User
+from Users.models import Profile
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 
 
-class UserListSerializer(serializers.ModelSerializer):
+class ProfilesListSerializer(serializers.ModelSerializer):
     """
     Сериализатор спискового представления юзера
     """
-    profile_pic_link = serializers.URLField(source='userext.profile_pic_link')
-    is_moderator = serializers.SerializerMethodField()
+    profile_pic_link = serializers.URLField(required=False, allow_null=True)
+    user_id = serializers.IntegerField(min_value=1, validators=[UniqueValidator(queryset=Profile.objects.all())])
 
     class Meta:
-        model = User
+        model = Profile
         fields = [
             'id',
-            'username',
+            'user_id',
             'profile_pic_link',
-            'is_superuser',
-            'is_moderator',
         ]
 
-    def get_is_moderator(self, instance: User):
-        return instance.userext.is_moderator()
+    def create(self, validated_data):
+        new = Profile.objects.create(**validated_data)
+        return new
 
 
-class UserSerializer(serializers.ModelSerializer):
+class ProfileSerializer(serializers.ModelSerializer):
     """
     Сериализатор юзера
     """
-    pin_sprite = serializers.IntegerField(source='userext.pin_sprite')
-    created_dt = serializers.DateTimeField(source='userext.created_dt')
-    geopin_sprite = serializers.IntegerField(source='userext.geopin_sprite')
+    pin_sprite = serializers.IntegerField(required=False)
+    created_dt = serializers.DateTimeField(read_only=True)
+    geopin_sprite = serializers.IntegerField(required=False)
     unlocked_pins = serializers.SerializerMethodField()
     unlocked_geopins = serializers.SerializerMethodField()
-    profile_pic_link = serializers.URLField(source='userext.profile_pic_link')
-    is_moderator = serializers.SerializerMethodField()
+    achievements = serializers.SerializerMethodField()
+    profile_pic_link = serializers.URLField(required=False)
+    user_id = serializers.IntegerField(min_value=1, validators=[UniqueValidator(queryset=Profile.objects.all())],
+                                       required=False)
 
     class Meta:
-        model = User
+        model = Profile
         fields = [
             'id',
-            'username',
-            'email',
+            'user_id',
             'pin_sprite',
             'geopin_sprite',
             'unlocked_pins',
             'unlocked_geopins',
+            'achievements',
             'profile_pic_link',
             'created_dt',
-            'is_superuser',
-            'is_moderator',
         ]
 
-    def get_unlocked_pins(self, instance: User):
-        return [int(x) for x in instance.userext.unlocked_pins.split(',')]
+    def get_unlocked_pins(self, instance: Profile):
+        return [int(x) for x in instance.unlocked_pins.split(',')]
 
-    def get_unlocked_geopins(self, instance: User):
-        return [int(x) for x in instance.userext.unlocked_geopins.split(',')]
+    def get_unlocked_geopins(self, instance: Profile):
+        return [int(x) for x in instance.unlocked_geopins.split(',')]
 
-    def get_is_moderator(self, instance: User):
-        return instance.userext.is_moderator()
+    def get_achievements(self, instance: Profile):
+        return [int(x) for x in instance.achievements.split(',')]
 
-
-class RegisterSerializer(serializers.ModelSerializer):
-    """
-    Сериализатор для регистрации пользователя
-    """
-    email = serializers.EmailField(required=False)
-    password_confirm = serializers.CharField(required=True, allow_null=False, allow_blank=False, write_only=True)
-
-    class Meta:
-        model = User
-        fields = [
-            'username',
-            'email',
-            'password',
-            'password_confirm'
-        ]
-        extra_kwargs = {
-            'password': {'write_only': True},
-        }
-
-    def create(self, validated_data):
-        if validated_data['password'] != validated_data['password_confirm']:
-            raise serializers.ValidationError('Пароли не совпадают')
-        new = User.objects.create(username=validated_data['username'], email=validated_data.get('email', ''))
-        new.set_password(validated_data['password'])
-        new.save()
-        return new
+    def update(self, instance: Profile, validated_data):
+        for attr, val in validated_data.items():
+            setattr(instance, attr, val)
+        instance.save()
+        return instance
