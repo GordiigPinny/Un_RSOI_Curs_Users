@@ -7,7 +7,7 @@ class ProfilesListSerializer(serializers.ModelSerializer):
     """
     Сериализатор спискового представления юзера
     """
-    profile_pic_link = serializers.URLField(required=False, allow_null=True)
+    profile_pic_link = serializers.URLField(required=False, allow_blank=True, allow_null=False, default='')
     user_id = serializers.IntegerField(min_value=1, validators=[UniqueValidator(queryset=Profile.objects.all())])
 
     class Meta:
@@ -33,7 +33,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     unlocked_pins = serializers.SerializerMethodField()
     unlocked_geopins = serializers.SerializerMethodField()
     achievements = serializers.SerializerMethodField()
-    profile_pic_link = serializers.URLField(required=False)
+    profile_pic_link = serializers.URLField(required=False, allow_blank=True, allow_null=False)
     user_id = serializers.IntegerField(read_only=True)
 
     class Meta:
