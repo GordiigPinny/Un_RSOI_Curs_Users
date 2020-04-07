@@ -160,3 +160,7 @@ try:
 except ImportError:
     pass
 
+try:
+    from ApiRequesters.settings import *
+except ImportError as e:
+    raise e
