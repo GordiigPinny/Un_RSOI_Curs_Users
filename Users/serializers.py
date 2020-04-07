@@ -34,8 +34,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     unlocked_geopins = serializers.SerializerMethodField()
     achievements = serializers.SerializerMethodField()
     profile_pic_link = serializers.URLField(required=False)
-    user_id = serializers.IntegerField(min_value=1, validators=[UniqueValidator(queryset=Profile.objects.all())],
-                                       required=False)
+    user_id = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Profile

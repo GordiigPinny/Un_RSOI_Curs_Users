@@ -43,9 +43,6 @@ class ProfileTestCase(LocalBaseTestCase):
         self.data_202 = {
             'pin_sprite': 2,
         }
-        self.data_400_1 = {
-            'user_id': -1,
-        }
 
     def testGet200_OK(self):
         response = self.get_response_and_check_status(url=self.path)
@@ -59,9 +56,6 @@ class ProfileTestCase(LocalBaseTestCase):
 
     def testPatch202_OK(self):
         response = self.patch_response_and_check_status(url=self.path, data=self.data_202)
-
-    def testPatch400_NegativeUserId(self):
-        _ = self.patch_response_and_check_status(url=self.path, data=self.data_400_1, expected_status_code=400)
 
     def testPatch404_WrongId(self):
         _ = self.patch_response_and_check_status(url=self.path_404, data=self.data_202, expected_status_code=404)
