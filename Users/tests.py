@@ -38,8 +38,8 @@ class ProfilesListTestCase(LocalBaseTestCase):
 class ProfileTestCase(LocalBaseTestCase):
     def setUp(self):
         super().setUp()
-        self.path = self.path_prefix + f'{self.profile.id}/'
-        self.path_404 = self.path_prefix + f'{self.profile.id + 1000}/'
+        self.path = self.path_prefix + f'{self.profile.user_id}/'
+        self.path_404 = self.path_prefix + f'{self.profile.user_id + 1000}/'
         self.data_202 = {
             'pin_sprite': 2,
         }
@@ -76,7 +76,7 @@ class ProfileTestCase(LocalBaseTestCase):
 class AddAwardTestCase(LocalBaseTestCase):
     def setUp(self):
         super().setUp()
-        self.path = self.path_prefix + f'{self.profile.id}/add_awards/'
+        self.path = self.path_prefix + f'{self.profile.user_id}/add_awards/'
         self.data_201_1 = {
             'award_type': 'ppin',
             'award_ids': [2, 3]

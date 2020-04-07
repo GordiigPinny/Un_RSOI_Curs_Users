@@ -21,6 +21,8 @@ class ProfileDetailView(RetrieveUpdateDestroyAPIView):
     Вьюха для детального представления профиля
     """
     serializer_class = ProfileSerializer
+    lookup_field = 'user_id'
+    lookup_url_kwarg = 'user_id'
 
     def get_queryset(self):
         return Profile.objects.all()
@@ -36,9 +38,9 @@ class AddNewAwardView(APIView):
     """
     Вьюха для добавления нового пина
     """
-    def post(self, request: Request, pk: int):
+    def post(self, request: Request, user_id: int):
         try:
-            profile = Profile.objects.get(pk=pk)
+            profile = Profile.objects.get(user_id=user_id)
         except Profile.DoesNotExist:
             return Response(status=404)
         try:
