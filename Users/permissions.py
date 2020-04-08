@@ -9,11 +9,11 @@ class EditableByMeAndAdminPermission(BasePermission):
     Пермишн на изменение инфы о юзере только самим юзером и админом
     """
     def has_permission(self, request, view):
-        if request.methos == 'GET':
+        if request.method == 'GET':
             return True
-        requester = AuthRequester()
+        r = AuthRequester()
         try:
-            _, auth_json = requester.get_user_info(get_token_from_request(requester))
+            _, auth_json = r.get_user_info(get_token_from_request(request))
         except BaseApiRequestError:
             return False
         return request.kwargs[view.lookup_url_kwarg] == auth_json['id'] or auth_json['is_superuser']
