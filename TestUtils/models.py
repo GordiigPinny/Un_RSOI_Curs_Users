@@ -3,6 +3,7 @@ from django.db.models import Model, QuerySet
 from rest_framework.test import APIClient
 from django.test import TestCase
 from django.contrib.auth.models import User
+from TestUtils.token import TestMockToken
 
 
 class BaseTestCase(TestCase):
@@ -13,8 +14,9 @@ class BaseTestCase(TestCase):
         self.user, _ = User.objects.get_or_create(username=self.user_username, password='')
         self.user.set_password(self.user_password)
         self.user.save()
+        self.token = TestMockToken()
 
-    def _get_api_client(self, auth: bool) -> APIClient:
+    def _get_api_client(self, auth: bool = False) -> APIClient:
         client = APIClient()
         if auth:
             client.force_authenticate(user=self.user)
@@ -32,78 +34,58 @@ class BaseTestCase(TestCase):
         finally:
             return json_response
 
-    def get_response_and_check_status(self, url: str, data: dict = {}, expected_status_code: int = 200,
-                                      auth: bool = False, token: Union[str, None] = None):
+    def get_response_and_check_status(self, url: str, data: dict = {}, expected_status_code: int = 200):
         """
         GET-запрос на сервер с проверкой статус-кода
         :param url: Урла куда стучимся
         :param data: Что кладем в body
         :param expected_status_code: Ожидаемый код возврата
-        :param auth: Нужно ли аутентифицироваться (тестовым юзером)
-        :param token: Токен, если нужно тестить что-то с ним (юзать с auth = False)
         :return: JSON, который вернулся с сервера
         """
-        client = self._get_api_client(auth)
-        if token:
-            assert not auth
-            client.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
+        client = self._get_api_client()
+        client.credentials(HTTP_AUTHORIZATION=self.token.token)
         response = client.get(url, data=data)
         json = self._handle_response(response, expected_status_code, url)
         return json
 
-    def post_response_and_check_status(self, url: str, data: dict = {}, expected_status_code: int = 201,
-                                       auth: bool = False, token: Union[str, None] = None):
+    def post_response_and_check_status(self, url: str, data: dict = {}, expected_status_code: int = 201):
         """
         POST-запрос на сервер с проверкой статус-кода
         :param url: Урла куда стучимся
         :param data: Что кладем в body
         :param expected_status_code: Ожидаемый код возврата
-        :param auth: Нужно ли аутентифицироваться (тестовым юзером)
-        :param token: Токен, если нужно тестить что-то с ним (юзать с auth = False)
         :return: JSON, который вернулся с сервера
         """
-        client = self._get_api_client(auth)
-        if token:
-            assert not auth
-            client.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
+        client = self._get_api_client()
+        client.credentials(HTTP_AUTHORIZATION=self.token.token)
         response = client.post(url, data=data, format='json')
         json = self._handle_response(response, expected_status_code, url)
         return json
 
-    def patch_response_and_check_status(self, url: str, data: dict = {}, expected_status_code: int = 202,
-                                        auth: bool = False, token: Union[str, None] = None):
+    def patch_response_and_check_status(self, url: str, data: dict = {}, expected_status_code: int = 202):
         """
         PATCH-запрос на сервер с проверкой статус-кода
         :param url: Урла куда стучимся
         :param data: Что кладем в body
         :param expected_status_code: Ожидаемый код возврата
-        :param auth: Нужно ли аутентифицироваться (тестовым юзером)
-        :param token: Токен, если нужно тестить что-то с ним (юзать с auth = False)
         :return: JSON, который вернулся с сервера
         """
-        client = self._get_api_client(auth)
-        if token:
-            assert not auth
-            client.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
+        client = self._get_api_client()
+        client.credentials(HTTP_AUTHORIZATION=self.token.token)
         response = client.patch(url, data=data, format='json')
         json = self._handle_response(response, expected_status_code, url)
         return json
 
-    def delete_response_and_check_status(self, url: str, data: dict = {}, expected_status_code: int = 204,
-                                         auth: bool = False, token: Union[str, None] = None):
+    def delete_response_and_check_status(self, url: str, data: dict = {}, expected_status_code: int = 204):
         """
         DELETE-запрос на сервер с проверкой статус-кода
         :param url: Урла куда стучимся
         :param data: Что кладем в body
         :param expected_status_code: Ожидаемый код возврата
-        :param auth: Нужно ли аутентифицироваться (тестовым юзером)
-        :param token: Токен, если нужно тестить что-то с ним (юзать с auth = False)
         :return: JSON, который вернулся с сервера
         """
-        client = self._get_api_client(auth)
-        if token:
-            assert not auth
-            client.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
+        client = self._get_api_client()
+        client.credentials(HTTP_AUTHORIZATION=self.token.token)
         response = client.delete(url, data=data)
         json = self._handle_response(response, expected_status_code, url)
         return json
