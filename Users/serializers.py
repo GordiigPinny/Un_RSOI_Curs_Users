@@ -7,7 +7,7 @@ class ProfilesListSerializer(serializers.ModelSerializer):
     """
     Сериализатор спискового представления юзера
     """
-    profile_pic_link = serializers.URLField(required=False, allow_blank=True, allow_null=False, default='')
+    pic_id = serializers.IntegerField(min_value=1, required=False, allow_null=True, default=None)
     user_id = serializers.IntegerField(min_value=1, validators=[UniqueValidator(queryset=Profile.objects.all())])
 
     class Meta:
@@ -15,7 +15,7 @@ class ProfilesListSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'user_id',
-            'profile_pic_link',
+            'pic_id',
         ]
 
     def create(self, validated_data):
@@ -33,7 +33,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     unlocked_pins = serializers.SerializerMethodField()
     unlocked_geopins = serializers.SerializerMethodField()
     achievements = serializers.SerializerMethodField()
-    profile_pic_link = serializers.URLField(required=False, allow_blank=True, allow_null=False)
+    pic_id = serializers.IntegerField(min_value=1, required=False, allow_null=True, default=None)
     user_id = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -46,7 +46,7 @@ class ProfileSerializer(serializers.ModelSerializer):
             'unlocked_pins',
             'unlocked_geopins',
             'achievements',
-            'profile_pic_link',
+            'pic_id',
             'created_dt',
         ]
 

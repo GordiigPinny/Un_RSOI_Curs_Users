@@ -21,15 +21,15 @@ class ProfilesListTestCase(LocalBaseTestCase):
 
     def testGet200_OK(self):
         response = self.get_response_and_check_status(url=self.path)
-        self.fields_test(response, needed_fields=['id', 'user_id', 'profile_pic_link'], allow_extra_fields=False)
+        self.fields_test(response, needed_fields=['id', 'user_id', 'pic_id'], allow_extra_fields=False)
         self.list_test(response, Profile)
 
     def testPost201_OK(self):
         _ = self.post_response_and_check_status(url=self.path, data=self.data_201)
 
-    def testPost401_UnknownUser(self):
+    def testPost401_403_UnknownUser(self):
         self.token.set_authenticate(False)
-        _ = self.post_response_and_check_status(url=self.path, data=self.data_201, expected_status_code=401)
+        _ = self.post_response_and_check_status(url=self.path, data=self.data_201, expected_status_code=[401, 403])
 
     def testPost400_UnexpectedResultFromAuthServer(self):
         self.token.set_error(self.token.ERRORS_KEYS.AUTH, self.token.ERRORS.BAD_CODE_400_TOKEN)
@@ -53,8 +53,7 @@ class ProfileTestCase(LocalBaseTestCase):
     def testGet200_OK(self):
         response = self.get_response_and_check_status(url=self.path)
         self.fields_test(response, needed_fields=['id', 'user_id', 'pin_sprite', 'geopin_sprite', 'created_dt',
-                                                  'unlocked_pins', 'unlocked_geopins', 'profile_pic_link',
-                                                  'achievements'],
+                                                  'unlocked_pins', 'unlocked_geopins', 'pic_id', 'achievements'],
                          allow_extra_fields=False)
 
     def testGet404_WrongId(self):
@@ -63,8 +62,8 @@ class ProfileTestCase(LocalBaseTestCase):
     def testPatch202_OK(self):
         _ = self.patch_response_and_check_status(url=self.path, data=self.data_202)
 
-    def testPatch401_WrongId(self):
-        _ = self.patch_response_and_check_status(url=self.path_404, data=self.data_202, expected_status_code=401)
+    def testPatch401_403_WrongId(self):
+        _ = self.patch_response_and_check_status(url=self.path_404, data=self.data_202, expected_status_code=[401, 403])
 
     def testDelete204_OK(self):
         _ = self.delete_response_and_check_status(url=self.path)

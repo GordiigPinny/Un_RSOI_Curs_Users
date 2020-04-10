@@ -17,7 +17,7 @@ class Profile(models.Model):
                                         validators=[validate_comma_separated_integer_list])
     achievements = models.TextField(blank=True, null=False, default='1',
                                     validators=[validate_comma_separated_integer_list])
-    profile_pic_link = models.URLField(null=False, blank=True, default='')
+    pic_id = models.PositiveIntegerField(null=True)
 
     def __str__(self):
         return f'Profile({self.id}) for user {self.user_id}'
