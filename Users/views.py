@@ -22,17 +22,23 @@ class ProfilesListView(ListCreateAPIView):
     def get_queryset(self):
         return Profile.objects.all()
 
-    def create(self, request, *args, **kwargs):
+    def post(self, request, **kwargs):
         r = AuthRequester()
         token = get_token_from_request(request)
         try:
-            auth_info = r.get_user_info(token)
+            auth_info = r.get_user_info(token)[1]
         except UnexpectedResponse as e:
-            return Response(data=e.response, status=e.code)
+            return Response(data=e.body, status=e.code)
         except BaseApiRequestError as e:
             return Response(data=str(e), status=500)
-        request._full_data['user_id'] = auth_info['id']
-        return super().create(request, args, kwargs)
+
+        data = request.data
+        data['user_id'] = auth_info['id']
+        serializer = self.serializer_class(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=201)
+        return Response(serializer.errors, status=400)
 
 
 class ProfileDetailView(RetrieveUpdateDestroyAPIView):

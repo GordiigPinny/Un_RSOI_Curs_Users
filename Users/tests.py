@@ -6,7 +6,7 @@ class LocalBaseTestCase(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.path_prefix = self.url_prefix + 'profiles/'
-        self.profile = Profile.objects.create(user_id=self.user.id)
+        self.profile = Profile.objects.create(user_id=100)
 
 
 class ProfilesListTestCase(LocalBaseTestCase):
@@ -17,10 +17,6 @@ class ProfilesListTestCase(LocalBaseTestCase):
         super().setUp()
         self.path = self.path_prefix
         self.data_201 = {
-            'user_id': self.user.id + 100,
-        }
-        self.data_400_1 = {
-            'user_id': self.user.id,
         }
 
     def testGet200_OK(self):
@@ -31,8 +27,17 @@ class ProfilesListTestCase(LocalBaseTestCase):
     def testPost201_OK(self):
         _ = self.post_response_and_check_status(url=self.path, data=self.data_201)
 
-    def testPost400_NotUniqueUserId(self):
-        _ = self.post_response_and_check_status(url=self.path, data=self.data_400_1, expected_status_code=400)
+    def testPost401_UnknownUser(self):
+        self.token.set_authenticate(False)
+        _ = self.post_response_and_check_status(url=self.path, data=self.data_201, expected_status_code=401)
+
+    def testPost400_UnexpectedResultFromAuthServer(self):
+        self.token.set_error(self.token.ERRORS_KEYS.AUTH, self.token.ERRORS.BAD_CODE_400_TOKEN)
+        _ = self.post_response_and_check_status(url=self.path, data=self.data_201, expected_status_code=400)
+
+    def testPost500_ServerError(self):
+        self.token.set_error(self.token.ERRORS_KEYS.AUTH, self.token.ERRORS.ERROR_TOKEN)
+        _ = self.post_response_and_check_status(url=self.path, data=self.data_201, expected_status_code=500)
 
 
 class ProfileTestCase(LocalBaseTestCase):
