@@ -6,7 +6,7 @@ class LocalBaseTestCase(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.path_prefix = self.url_prefix + 'profiles/'
-        self.profile = Profile.objects.create(user_id=self.user.id)
+        self.profile = Profile.objects.create(user_id=100)
 
 
 class ProfilesListTestCase(LocalBaseTestCase):
@@ -17,10 +17,6 @@ class ProfilesListTestCase(LocalBaseTestCase):
         super().setUp()
         self.path = self.path_prefix
         self.data_201 = {
-            'user_id': self.user.id + 100,
-        }
-        self.data_400_1 = {
-            'user_id': self.user.id,
         }
 
     def testGet200_OK(self):
@@ -31,13 +27,23 @@ class ProfilesListTestCase(LocalBaseTestCase):
     def testPost201_OK(self):
         _ = self.post_response_and_check_status(url=self.path, data=self.data_201)
 
-    def testPost400_NotUniqueUserId(self):
-        _ = self.post_response_and_check_status(url=self.path, data=self.data_400_1, expected_status_code=400)
+    def testPost401_UnknownUser(self):
+        self.token.set_authenticate(False)
+        _ = self.post_response_and_check_status(url=self.path, data=self.data_201, expected_status_code=401)
+
+    def testPost400_UnexpectedResultFromAuthServer(self):
+        self.token.set_error(self.token.ERRORS_KEYS.AUTH, self.token.ERRORS.BAD_CODE_400_TOKEN)
+        _ = self.post_response_and_check_status(url=self.path, data=self.data_201, expected_status_code=400)
+
+    def testPost500_ServerError(self):
+        self.token.set_error(self.token.ERRORS_KEYS.AUTH, self.token.ERRORS.ERROR_TOKEN)
+        _ = self.post_response_and_check_status(url=self.path, data=self.data_201, expected_status_code=500)
 
 
 class ProfileTestCase(LocalBaseTestCase):
     def setUp(self):
         super().setUp()
+        self.profile = Profile.objects.create(user_id=1)
         self.path = self.path_prefix + f'{self.profile.user_id}/'
         self.path_404 = self.path_prefix + f'{self.profile.user_id + 1000}/'
         self.data_202 = {
@@ -55,21 +61,22 @@ class ProfileTestCase(LocalBaseTestCase):
         _ = self.get_response_and_check_status(url=self.path_404, expected_status_code=404)
 
     def testPatch202_OK(self):
-        response = self.patch_response_and_check_status(url=self.path, data=self.data_202)
+        _ = self.patch_response_and_check_status(url=self.path, data=self.data_202)
 
-    def testPatch404_WrongId(self):
-        _ = self.patch_response_and_check_status(url=self.path_404, data=self.data_202, expected_status_code=404)
+    def testPatch401_WrongId(self):
+        _ = self.patch_response_and_check_status(url=self.path_404, data=self.data_202, expected_status_code=401)
 
     def testDelete204_OK(self):
         _ = self.delete_response_and_check_status(url=self.path)
 
-    def testDelete404_WrongId(self):
-        _ = self.delete_response_and_check_status(url=self.path_404, expected_status_code=404)
+    def testDelete401_WrongId(self):
+        _ = self.delete_response_and_check_status(url=self.path_404, expected_status_code=401)
 
 
 class AddAwardTestCase(LocalBaseTestCase):
     def setUp(self):
         super().setUp()
+        self.profile = Profile.objects.create(user_id=1)
         self.path = self.path_prefix + f'{self.profile.user_id}/add_awards/'
         self.data_201_1 = {
             'award_type': 'ppin',
@@ -96,16 +103,19 @@ class AddAwardTestCase(LocalBaseTestCase):
         }
 
     def testPost201_Ppin(self):
+        self.token.set_another_key('award_type', 'pin')
         response = self.post_response_and_check_status(url=self.path, data=self.data_201_1)
         for aid in self.data_201_1['award_ids']:
             self.assertTrue(aid in response['unlocked_pins'], msg='Not all pins was added')
 
     def testPost201_Upin(self):
+        self.token.set_another_key('award_type', 'pin')
         response = self.post_response_and_check_status(url=self.path, data=self.data_201_2)
         for aid in self.data_201_2['award_ids']:
             self.assertTrue(aid in response['unlocked_geopins'], msg='Not all pins was added')
 
     def testPost201_Achievement(self):
+        self.token.set_another_key('award_type', 'achievement')
         response = self.post_response_and_check_status(url=self.path, data=self.data_201_3)
         for aid in self.data_201_3['award_ids']:
             self.assertTrue(aid in response['achievements'], msg='Not all achievements was added')
