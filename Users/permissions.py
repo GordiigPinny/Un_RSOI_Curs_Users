@@ -16,4 +16,4 @@ class EditableByMeAndAdminPermission(BasePermission):
             _, auth_json = r.get_user_info(get_token_from_request(request))
         except BaseApiRequestError:
             return False
-        return request.kwargs[view.lookup_url_kwarg] == auth_json['id'] or auth_json['is_superuser']
+        return int(view.kwargs[view.lookup_url_kwarg]) == auth_json['id'] or auth_json['is_superuser']
