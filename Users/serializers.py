@@ -1,6 +1,9 @@
 from Users.models import Profile
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
+from ApiRequesters.Media.MediaRequester import MediaRequester
+from ApiRequesters.utils import get_token_from_request
+from ApiRequesters.exceptions import BaseApiRequestError
 
 
 class ProfilesListSerializer(serializers.ModelSerializer):
@@ -17,6 +20,15 @@ class ProfilesListSerializer(serializers.ModelSerializer):
             'user_id',
             'pic_id',
         ]
+
+    def validate_pic_id(self, value: int):
+        r = MediaRequester()
+        token = get_token_from_request(self.context['request'])
+        try:
+            _ = r.get_image_info(value, token)
+            return value
+        except BaseApiRequestError:
+            return None
 
     def create(self, validated_data):
         new = Profile.objects.create(**validated_data)
@@ -58,6 +70,15 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     def get_achievements(self, instance: Profile):
         return [int(x) for x in instance.achievements.split(',')]
+
+    def validate_pic_id(self, value: int):
+        r = MediaRequester()
+        token = get_token_from_request(self.context['request'])
+        try:
+            _ = r.get_image_info(value, token)
+            return value
+        except BaseApiRequestError:
+            return None
 
     def update(self, instance: Profile, validated_data):
         for attr, val in validated_data.items():
