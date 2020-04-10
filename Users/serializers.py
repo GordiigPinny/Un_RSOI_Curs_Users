@@ -22,6 +22,8 @@ class ProfilesListSerializer(serializers.ModelSerializer):
         ]
 
     def validate_pic_id(self, value: int):
+        if value is None:
+            return value
         r = MediaRequester()
         token = get_token_from_request(self.context['request'])
         try:
@@ -72,6 +74,8 @@ class ProfileSerializer(serializers.ModelSerializer):
         return [int(x) for x in instance.achievements.split(',')]
 
     def validate_pic_id(self, value: int):
+        if value is None:
+            return value
         r = MediaRequester()
         token = get_token_from_request(self.context['request'])
         try:
