@@ -13,7 +13,6 @@ class BaseTestCase(TestCase):
         self.user_password = 'Test'
         self.user, _ = User.objects.get_or_create(username=self.user_username, password='')
         self.user.set_password(self.user_password)
-        self.user.save()
         self.token = TestMockToken()
 
     def _get_api_client(self, auth: bool = False) -> APIClient:
@@ -22,10 +21,16 @@ class BaseTestCase(TestCase):
             client.force_authenticate(user=self.user)
         return client
 
-    def _handle_response(self, response, expected_status_code: int, url: str) -> dict:
-        self.assertEqual(response.status_code, expected_status_code,
-                         msg=f'Respone\'s status code for url {url} is {response.status_code}, '
-                             f'expected {expected_status_code}')
+    def _handle_response(self, response, expected_status_code: Union[int, list, None], url: str) -> dict:
+        if expected_status_code:
+            if isinstance(expected_status_code, int):
+                self.assertEqual(response.status_code, expected_status_code,
+                                 msg=f'Respone\'s status code for url {url} is {response.status_code}, '
+                                     f'expected {expected_status_code}')
+            else:
+                self.assertTrue(response.status_code in expected_status_code,
+                                msg=f'Respone\'s status code for url {url} is {response.status_code}, '
+                                    f'expected {expected_status_code}')
         json_response = {}
         try:
             json_response = response.json()
@@ -34,12 +39,15 @@ class BaseTestCase(TestCase):
         finally:
             return json_response
 
-    def get_response_and_check_status(self, url: str, data: dict = {}, expected_status_code: int = 200):
+    def get_response_and_check_status(self, url: str, data: dict = {},
+                                      expected_status_code: Union[int, list, None] = 200):
         """
         GET-запрос на сервер с проверкой статус-кода
         :param url: Урла куда стучимся
         :param data: Что кладем в body
         :param expected_status_code: Ожидаемый код возврата
+        :param auth: Нужно ли аутентифицироваться (тестовым юзером)
+        :param token: Токен, если нужно тестить что-то с ним (юзать с auth = False)
         :return: JSON, который вернулся с сервера
         """
         client = self._get_api_client()
@@ -48,12 +56,15 @@ class BaseTestCase(TestCase):
         json = self._handle_response(response, expected_status_code, url)
         return json
 
-    def post_response_and_check_status(self, url: str, data: dict = {}, expected_status_code: int = 201):
+    def post_response_and_check_status(self, url: str, data: dict = {},
+                                       expected_status_code: Union[int, list, None] = 201):
         """
         POST-запрос на сервер с проверкой статус-кода
         :param url: Урла куда стучимся
         :param data: Что кладем в body
         :param expected_status_code: Ожидаемый код возврата
+        :param auth: Нужно ли аутентифицироваться (тестовым юзером)
+        :param token: Токен, если нужно тестить что-то с ним (юзать с auth = False)
         :return: JSON, который вернулся с сервера
         """
         client = self._get_api_client()
@@ -62,12 +73,15 @@ class BaseTestCase(TestCase):
         json = self._handle_response(response, expected_status_code, url)
         return json
 
-    def patch_response_and_check_status(self, url: str, data: dict = {}, expected_status_code: int = 202):
+    def patch_response_and_check_status(self, url: str, data: dict = {},
+                                        expected_status_code: Union[int, list, None] = 202):
         """
         PATCH-запрос на сервер с проверкой статус-кода
         :param url: Урла куда стучимся
         :param data: Что кладем в body
         :param expected_status_code: Ожидаемый код возврата
+        :param auth: Нужно ли аутентифицироваться (тестовым юзером)
+        :param token: Токен, если нужно тестить что-то с ним (юзать с auth = False)
         :return: JSON, который вернулся с сервера
         """
         client = self._get_api_client()
@@ -76,12 +90,15 @@ class BaseTestCase(TestCase):
         json = self._handle_response(response, expected_status_code, url)
         return json
 
-    def delete_response_and_check_status(self, url: str, data: dict = {}, expected_status_code: int = 204):
+    def delete_response_and_check_status(self, url: str, data: dict = {},
+                                         expected_status_code: Union[int, list, None] = 204):
         """
         DELETE-запрос на сервер с проверкой статус-кода
         :param url: Урла куда стучимся
         :param data: Что кладем в body
         :param expected_status_code: Ожидаемый код возврата
+        :param auth: Нужно ли аутентифицироваться (тестовым юзером)
+        :param token: Токен, если нужно тестить что-то с ним (юзать с auth = False)
         :return: JSON, который вернулся с сервера
         """
         client = self._get_api_client()

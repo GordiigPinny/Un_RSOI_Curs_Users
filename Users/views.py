@@ -34,7 +34,7 @@ class ProfilesListView(ListCreateAPIView):
 
         data = request.data
         data['user_id'] = auth_info['id']
-        serializer = self.serializer_class(data=data)
+        serializer = self.serializer_class(data=data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=201)
@@ -108,5 +108,5 @@ class AddNewAwardView(APIView):
         else:
             profile.achievements += ',' + ','.join([str(x) for x in award_ids])
         profile.save()
-        s = ProfileSerializer(profile)
+        s = ProfileSerializer(profile, context={'request': request})
         return Response(s.data, status=201)

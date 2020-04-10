@@ -1,13 +1,16 @@
 from Users.models import Profile
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
+from ApiRequesters.Media.MediaRequester import MediaRequester
+from ApiRequesters.utils import get_token_from_request
+from ApiRequesters.exceptions import BaseApiRequestError
 
 
 class ProfilesListSerializer(serializers.ModelSerializer):
     """
     Сериализатор спискового представления юзера
     """
-    profile_pic_link = serializers.URLField(required=False, allow_blank=True, allow_null=False, default='')
+    pic_id = serializers.IntegerField(min_value=1, required=False, allow_null=True, default=None)
     user_id = serializers.IntegerField(min_value=1, validators=[UniqueValidator(queryset=Profile.objects.all())])
 
     class Meta:
@@ -15,8 +18,17 @@ class ProfilesListSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'user_id',
-            'profile_pic_link',
+            'pic_id',
         ]
+
+    def validate_pic_id(self, value: int):
+        r = MediaRequester()
+        token = get_token_from_request(self.context['request'])
+        try:
+            _ = r.get_image_info(value, token)
+            return value
+        except BaseApiRequestError:
+            return None
 
     def create(self, validated_data):
         new = Profile.objects.create(**validated_data)
@@ -33,7 +45,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     unlocked_pins = serializers.SerializerMethodField()
     unlocked_geopins = serializers.SerializerMethodField()
     achievements = serializers.SerializerMethodField()
-    profile_pic_link = serializers.URLField(required=False, allow_blank=True, allow_null=False)
+    pic_id = serializers.IntegerField(min_value=1, required=False, allow_null=True, default=None)
     user_id = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -46,7 +58,7 @@ class ProfileSerializer(serializers.ModelSerializer):
             'unlocked_pins',
             'unlocked_geopins',
             'achievements',
-            'profile_pic_link',
+            'pic_id',
             'created_dt',
         ]
 
@@ -58,6 +70,15 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     def get_achievements(self, instance: Profile):
         return [int(x) for x in instance.achievements.split(',')]
+
+    def validate_pic_id(self, value: int):
+        r = MediaRequester()
+        token = get_token_from_request(self.context['request'])
+        try:
+            _ = r.get_image_info(value, token)
+            return value
+        except BaseApiRequestError:
+            return None
 
     def update(self, instance: Profile, validated_data):
         for attr, val in validated_data.items():
