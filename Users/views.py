@@ -6,12 +6,13 @@ from ApiRequesters.Auth.AuthRequester import AuthRequester
 from ApiRequesters.utils import get_token_from_request
 from ApiRequesters.exceptions import BaseApiRequestError, UnexpectedResponse
 from ApiRequesters.Awards.AwardsRequester import AwardsRequester
+from ApiRequesters.Stats.decorators import collect_request_stats_decorator, CollectStatsMixin
 from Users.models import Profile
 from Users.serializers import ProfileSerializer, ProfilesListSerializer
 from Users.permissions import EditableByMeAndAdminPermission
 
 
-class ProfilesListView(ListCreateAPIView):
+class ProfilesListView(ListCreateAPIView, CollectStatsMixin):
     """
     Вьюха для спискового представления профилей
     """
@@ -22,6 +23,11 @@ class ProfilesListView(ListCreateAPIView):
     def get_queryset(self):
         return Profile.objects.all()
 
+    @collect_request_stats_decorator()
+    def get(self, request, *args, **kwargs):
+        super().get(request, *args, **kwargs)
+
+    @collect_request_stats_decorator()
     def post(self, request, **kwargs):
         r = AuthRequester()
         token = get_token_from_request(request)
@@ -41,7 +47,7 @@ class ProfilesListView(ListCreateAPIView):
         return Response(serializer.errors, status=400)
 
 
-class ProfileDetailView(RetrieveUpdateDestroyAPIView):
+class ProfileDetailView(RetrieveUpdateDestroyAPIView, CollectStatsMixin):
     """
     Вьюха для детального представления профиля
     """
@@ -53,8 +59,13 @@ class ProfileDetailView(RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         return Profile.objects.all()
 
+    @collect_request_stats_decorator()
+    def get(self, request, *args, **kwargs):
+        super().get(request, *args, **kwargs)
+
+    @collect_request_stats_decorator()
     def update(self, request, *args, **kwargs):
-        response = super().update(request, args, kwargs)
+        response = super().update(request, *args, **kwargs)
         if response.status_code == 200:
             response.status_code = 202
         return response
@@ -79,6 +90,7 @@ class AddNewAwardView(APIView):
             return False
         return True
 
+    @collect_request_stats_decorator()
     def post(self, request: Request, user_id: int):
         try:
             profile = Profile.objects.get(user_id=user_id)
