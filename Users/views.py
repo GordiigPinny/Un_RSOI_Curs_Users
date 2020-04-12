@@ -25,7 +25,7 @@ class ProfilesListView(ListCreateAPIView, CollectStatsMixin):
 
     @collect_request_stats_decorator()
     def get(self, request, *args, **kwargs):
-        super().get(request, *args, **kwargs)
+        return super().get(request, *args, **kwargs)
 
     @collect_request_stats_decorator()
     def post(self, request, **kwargs):
@@ -61,7 +61,7 @@ class ProfileDetailView(RetrieveUpdateDestroyAPIView, CollectStatsMixin):
 
     @collect_request_stats_decorator()
     def get(self, request, *args, **kwargs):
-        super().get(request, *args, **kwargs)
+        return super().get(request, *args, **kwargs)
 
     @collect_request_stats_decorator()
     def update(self, request, *args, **kwargs):
@@ -71,7 +71,7 @@ class ProfileDetailView(RetrieveUpdateDestroyAPIView, CollectStatsMixin):
         return response
 
 
-class AddNewAwardView(APIView):
+class AddNewAwardView(APIView, CollectStatsMixin):
     """
     Вьюха для добавления нового пина
     """
