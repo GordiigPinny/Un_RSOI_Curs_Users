@@ -1,7 +1,7 @@
 from rest_framework.views import APIView, Response, Request
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.pagination import LimitOffsetPagination
-from ApiRequesters.Auth.permissions import IsAuthenticated
+from ApiRequesters.Auth.permissions import IsAuthenticated, IsAppTokenCorrect
 from ApiRequesters.Auth.AuthRequester import AuthRequester
 from ApiRequesters.utils import get_token_from_request
 from ApiRequesters.exceptions import BaseApiRequestError, UnexpectedResponse
@@ -71,54 +71,85 @@ class ProfileDetailView(RetrieveUpdateDestroyAPIView, CollectStatsMixin):
         return response
 
 
-class AddNewAwardView(APIView, CollectStatsMixin):
+class AddNewAchievementView(APIView, CollectStatsMixin):
     """
     Вьюха для добавления нового пина
     """
-    permission_classes = (EditableByMeAndAdminPermission, )
-    lookup_url_kwarg = 'user_id'
+    permission_classes = (IsAppTokenCorrect, )
 
-    def _check_awards_ids(self, award_type, awards_ids, token) -> bool:
-        r = AwardsRequester()
-        try:
-            for award_id in awards_ids:
-                if award_type == 'achievement':
-                    r.get_achievement(award_id, token)
-                else:
-                    r.get_pin(award_id, token)
-        except BaseApiRequestError:
-            return False
-        return True
-
-    @collect_request_stats_decorator()
+    @collect_request_stats_decorator(another_stats_funcs=[CollectStatsMixin.collect_achievement_stats])
     def post(self, request: Request, user_id: int):
         try:
             profile = Profile.objects.get(user_id=user_id)
         except Profile.DoesNotExist:
-            return Response(status=404)
+            return Response({'error': 'Такого пользователя не существует'}, status=404)
+
         try:
-            award_type, award_ids = request.data['award_type'], request.data['award_ids']
+            achievement_id = request.data['achievement_id']
         except KeyError:
-            return Response({'error': 'Необходимые поля: "award_type", "award_ids"'}, status=400)
+            return Response({'error': 'Необходимо указать achievement_id'}, status=400)
 
-        if not isinstance(award_ids, list):
-            return Response({'error': '"award_ids" должен быть массивом'}, status=400)
+        if achievement_id in profile.get_achievements():
+            return Response({'error': 'У пользователя уже есть это достижение'}, status=400)
+        profile.add_achievement(achievement_id)
+        s = ProfileSerializer(instance=profile)
+        stats_kwargs = [{
+            'achievement_id': achievement_id,
+            'request': request,
+        }]
+        return Response(s.data, status=201), stats_kwargs
 
-        if len([x for x in award_ids if not isinstance(x, int)]) > 0:
-            return Response({'error': '"award_ids" должен быть целочисленным массивом'}, status=400)
 
-        if award_type not in ['upin', 'ppin', 'achievement']:
-            return Response({'error': 'Допустимые типы наград: "upin", "ppin", "achievement"'}, status=400)
+class BuyPinView(APIView, CollectStatsMixin):
+    """
+    Вьюха покупки пина
+    """
+    permission_classes = (IsAppTokenCorrect, )
 
-        if not self._check_awards_ids(award_type, award_ids, get_token_from_request(request)):
-            return Response({'error': 'Некоторые id наград не существуют'}, status=404)
+    @collect_request_stats_decorator(another_stats_funcs=[CollectStatsMixin.collect_pin_purchase_stats])
+    def post(self, request, user_id):
+        try:
+            profile = Profile.objects.get(user_id=user_id)
+        except Profile.DoesNotExist:
+            return Response({'error': 'Такого пользователя не существует'}, status=404)
 
-        if award_type == 'upin':
-            profile.unlocked_geopins += ',' + ','.join([str(x) for x in award_ids])
-        elif award_type == 'ppin':
-            profile.unlocked_pins += ',' + ','.join([str(x) for x in award_ids])
-        else:
-            profile.achievements += ',' + ','.join([str(x) for x in award_ids])
-        profile.save()
-        s = ProfileSerializer(profile, context={'request': request})
-        return Response(s.data, status=201)
+        try:
+            pin_id = request.data['pin_id']
+            price = request.data['price']
+        except KeyError:
+            return Response({'error': 'Необходимо указать id и price пина'}, status=400)
+
+        if pin_id in profile.get_unlocked_pins():
+            return Response({'error': 'У вас уже есть этот пин'}, status=400)
+        if profile.money < price:
+            return Response({'error': 'Недостаточно баллов для покупки'}, status=400)
+        profile.add_pin(pin_id, price)
+        s = ProfileSerializer(instance=profile)
+        stats_kwargs = [{
+            'pin_id': pin_id,
+            'request': request,
+        }]
+        return Response(s.data, status=201), stats_kwargs
+
+
+class ChangeRatingView(APIView, CollectStatsMixin):
+    """
+    Вьюха для изменения рейтинга
+    """
+    permission_classes = (IsAppTokenCorrect, )
+
+    @collect_request_stats_decorator()
+    def patch(self, request: Request, user_id: int):
+        try:
+            profile = Profile.objects.get(user_id=user_id)
+        except Profile.DoesNotExist:
+            return Response({'error': 'Такого пользователя не существует'}, status=404)
+
+        try:
+            d_rating = request.data['d_rating']
+        except KeyError:
+            return Response({'error': 'Необходимо указать d_rating'}, status=400)
+
+        profile.update_rating(d_rating)
+        s = ProfileSerializer(instance=profile)
+        return Response(s.data, status=202)

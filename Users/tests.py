@@ -53,7 +53,7 @@ class ProfileTestCase(LocalBaseTestCase):
     def testGet200_OK(self):
         response = self.get_response_and_check_status(url=self.path)
         self.fields_test(response, needed_fields=['id', 'user_id', 'pin_sprite', 'geopin_sprite', 'created_dt',
-                                                  'unlocked_pins', 'unlocked_geopins', 'pic_id', 'achievements'],
+                                                  'unlocked_pins', 'pic_id', 'achievements', 'money', 'rating'],
                          allow_extra_fields=False)
 
     def testGet404_WrongId(self):
@@ -73,57 +73,122 @@ class ProfileTestCase(LocalBaseTestCase):
 
 
 class AddAwardTestCase(LocalBaseTestCase):
+    """
+    Тесты для /add_achievement/
+    """
     def setUp(self):
         super().setUp()
-        self.profile = Profile.objects.create(user_id=1)
-        self.path = self.path_prefix + f'{self.profile.user_id}/add_awards/'
-        self.data_201_1 = {
-            'award_type': 'ppin',
-            'award_ids': [2, 3]
-        }
-        self.data_201_2 = {
-            'award_type': 'upin',
-            'award_ids': [2, 3]
-        }
-        self.data_201_3 = {
-            'award_type': 'achievement',
-            'award_ids': [2, 3]
+        self.path = self.path_prefix + f'{self.profile.user_id}/add_achievement/'
+        self.data_201 = {
+            'achievement_id': 2,
         }
         self.data_400_1 = {
-            'award_type': 'Not enough',
+
         }
         self.data_400_2 = {
-            'award_type': 'no',
-            'award_ids': [2, 3]
-        }
-        self.data_400_3 = {
-            'award_type': 'ptype',
-            'award_ids': 1,
+            'achievement_id': self.profile.get_achievements()[0],
         }
 
-    def testPost201_Ppin(self):
-        self.token.set_another_key('award_type', 'pin')
-        response = self.post_response_and_check_status(url=self.path, data=self.data_201_1)
-        for aid in self.data_201_1['award_ids']:
-            self.assertTrue(aid in response['unlocked_pins'], msg='Not all pins was added')
-
-    def testPost201_Upin(self):
-        self.token.set_another_key('award_type', 'pin')
-        response = self.post_response_and_check_status(url=self.path, data=self.data_201_2)
-        for aid in self.data_201_2['award_ids']:
-            self.assertTrue(aid in response['unlocked_geopins'], msg='Not all pins was added')
-
-    def testPost201_Achievement(self):
-        self.token.set_another_key('award_type', 'achievement')
-        response = self.post_response_and_check_status(url=self.path, data=self.data_201_3)
-        for aid in self.data_201_3['award_ids']:
-            self.assertTrue(aid in response['achievements'], msg='Not all achievements was added')
+    def testPost201_OK(self):
+        _ = self.post_response_and_check_status(url=self.path, data=self.data_201)
 
     def testPost400_WrongJSON(self):
         _ = self.post_response_and_check_status(url=self.path, data=self.data_400_1, expected_status_code=400)
 
-    def testPost400_WrongType(self):
+    def testPost400_OwnedAchievement(self):
         _ = self.post_response_and_check_status(url=self.path, data=self.data_400_2, expected_status_code=400)
 
-    def testPost400_WrongIds(self):
+    def testPost401_403_AuthServiceError(self):
+        self.token.set_error(self.token.ERRORS_KEYS.APP_AUTH, self.token.ERRORS.ERROR_TOKEN)
+        _ = self.post_response_and_check_status(url=self.path, data=self.data_201, expected_status_code=[401, 403])
+
+    def testPost401_403_WrongAppToken(self):
+        self.token.set_error(self.token.ERRORS_KEYS.APP_AUTH, self.token.ERRORS.BAD_CODE_401_TOKEN)
+        _ = self.post_response_and_check_status(url=self.path, data=self.data_201, expected_status_code=[401, 403])
+
+
+class BuyPinTestCase(LocalBaseTestCase):
+    """
+    Тесты для /buy_pin/
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.path = self.path_prefix + f'{self.profile.user_id}/buy_pin/'
+        self.profile.money = 100
+        self.profile.save()
+        self.data_201 = {
+            'pin_id': 3,
+            'price': 10,
+        }
+        self.data_400_1 = {
+
+        }
+        self.data_400_2 = {
+            'achievement_id': self.profile.get_unlocked_pins()[0],
+            'price': 10,
+        }
+        self.data_400_3 = {
+            'pin_id': 3,
+            'price': 1000,
+        }
+
+    def testPost201_OK(self):
+        _ = self.post_response_and_check_status(url=self.path, data=self.data_201)
+
+    def testPost400_WrongJSON(self):
+        _ = self.post_response_and_check_status(url=self.path, data=self.data_400_1, expected_status_code=400)
+
+    def testPost400_OwnedAchievement(self):
+        _ = self.post_response_and_check_status(url=self.path, data=self.data_400_2, expected_status_code=400)
+
+    def testPost400_NotEnoughMoney(self):
         _ = self.post_response_and_check_status(url=self.path, data=self.data_400_3, expected_status_code=400)
+
+    def testPost401_403_AuthServiceError(self):
+        self.token.set_error(self.token.ERRORS_KEYS.APP_AUTH, self.token.ERRORS.ERROR_TOKEN)
+        _ = self.post_response_and_check_status(url=self.path, data=self.data_201, expected_status_code=[401, 403])
+
+    def testPost401_403_WrongAppToken(self):
+        self.token.set_error(self.token.ERRORS_KEYS.APP_AUTH, self.token.ERRORS.BAD_CODE_401_TOKEN)
+        _ = self.post_response_and_check_status(url=self.path, data=self.data_201, expected_status_code=[401, 403])
+
+
+class ChangeRatingTestCase(LocalBaseTestCase):
+    """
+    Тесты для /update_rating/
+    """
+    def setUp(self):
+        super().setUp()
+        self.path = self.path_prefix + f'{self.profile.user_id}/update_rating/'
+        self.data_202_1 = {
+            'd_rating': 100,
+        }
+        self.data_202_2 = {
+            'd_rating': -100,
+        }
+        self.data_400_1 = {
+
+        }
+
+    def testPost201_OK(self):
+        _ = self.patch_response_and_check_status(url=self.path, data=self.data_202_1)
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.rating, self.data_202_1['d_rating'], msg='Rating is not zero')
+
+    def testPost201_NegativeRating(self):
+        _ = self.patch_response_and_check_status(url=self.path, data=self.data_202_2)
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.rating, 0, msg='Rating is not zero')
+
+    def testPost400_WrongJSON(self):
+        _ = self.patch_response_and_check_status(url=self.path, data=self.data_400_1, expected_status_code=400)
+
+    def testPost401_403_AuthServiceError(self):
+        self.token.set_error(self.token.ERRORS_KEYS.APP_AUTH, self.token.ERRORS.ERROR_TOKEN)
+        _ = self.patch_response_and_check_status(url=self.path, data=self.data_202_1, expected_status_code=[401, 403])
+
+    def testPost401_403_WrongAppToken(self):
+        self.token.set_error(self.token.ERRORS_KEYS.APP_AUTH, self.token.ERRORS.BAD_CODE_401_TOKEN)
+        _ = self.patch_response_and_check_status(url=self.path, data=self.data_202_1, expected_status_code=[401, 403])
+
