@@ -41,6 +41,9 @@ class ProfilesListTestCase(LocalBaseTestCase):
 
 
 class ProfileTestCase(LocalBaseTestCase):
+    """
+    Тесты для /profiles/<id>/
+    """
     def setUp(self):
         super().setUp()
         self.profile = Profile.objects.create(user_id=1)
