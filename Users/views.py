@@ -8,7 +8,7 @@ from ApiRequesters.exceptions import BaseApiRequestError, UnexpectedResponse
 from ApiRequesters.Awards.AwardsRequester import AwardsRequester
 from ApiRequesters.Stats.decorators import collect_request_stats_decorator, CollectStatsMixin
 from Users.models import Profile
-from Users.serializers import ProfileSerializer, ProfilesListSerializer
+from Users.serializers import ProfileSerializer, ProfilesListSerializer, SignUpSerializer
 from Users.permissions import EditableByMeAndAdminPermission
 
 
@@ -153,3 +153,26 @@ class ChangeRatingView(APIView, CollectStatsMixin):
         profile.update_rating(d_rating)
         s = ProfileSerializer(instance=profile)
         return Response(s.data, status=202)
+
+
+class SignUpView(APIView):
+    """
+    Вьюха для регистрации (с запросом на auth)
+    """
+    def post(self, request: Request):
+        serializer = SignUpSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            _, tokens = AuthRequester().sign_up(request.data['username'], request.data['password'],
+                                                request.data.get('email', ''))
+            _, auth_json = AuthRequester().get_user_info(tokens['access'])
+            profile = Profile.objects.create(user_id=auth_json['id'])
+            profile_json = ProfileSerializer(instance=profile).data
+            ret_data = {
+                'token': tokens,
+                'user': auth_json,
+                'profile': profile_json,
+            }
+            return Response(ret_data, status=201)
+        except (BaseApiRequestError, KeyError):
+            return Response({'error': 'Error on creating new profile with user'}, status=400)

@@ -2,6 +2,7 @@ from rest_framework.permissions import BasePermission
 from ApiRequesters.Auth.AuthRequester import AuthRequester
 from ApiRequesters.utils import get_token_from_request
 from ApiRequesters.exceptions import BaseApiRequestError
+from Users.models import Profile
 
 
 class EditableByMeAndAdminPermission(BasePermission):
