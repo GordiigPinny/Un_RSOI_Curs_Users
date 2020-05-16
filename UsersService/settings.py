@@ -67,7 +67,6 @@ except ImportError:
 INSTALLED_APPS = DJANGO_APPS + DEV_APPS + THIRD_PARTY_APPS
 
 
-
 ROOT_URLCONF = 'UsersService.urls'
 
 TEMPLATES = [
@@ -136,7 +135,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
-STATIC_ROOT = os.path.join(BASE_DIR, 'static/static/')
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 STATIC_URL = '/static/'
 
@@ -160,3 +159,18 @@ try:
 except ImportError:
     pass
 
+try:
+    from ApiRequesters.settings import *
+except ImportError as e:
+    raise e
+
+APP_ID = ENV['USERS_APP_ID']
+APP_SECRET = ENV['USERS_SECRET']
+
+ALLOW_REQUESTS = True
+
+ON_HEROKU = not (os.getenv('ON_HEROKU', '0') == '0')
+
+if not DEBUG:
+    import django_heroku
+    django_heroku.settings(locals(), databases=ON_HEROKU, test_runner=False, secret_key=False)

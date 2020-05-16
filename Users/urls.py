@@ -3,8 +3,10 @@ from Users import views
 
 
 urlpatterns = [
-    url(r'^register/$', views.RegisterView.as_view()),
-    url(r'^users/$', views.UserListView.as_view()),
-    url(r'^users/(?P<pk>\d+)/$', views.UserDetailView.as_view()),
-    url(r'^users/(?P<pk>\d+)/change_password/$', views.ChangePasswordView.as_view()),
+    url(r'^profiles/$', views.ProfilesListView.as_view()),
+    url(r'^profiles/register/$', views.SignUpView.as_view()),
+    url(r'^profiles/(?P<user_id>\d+)/$', views.ProfileDetailView.as_view()),
+    url(r'^profiles/(?P<user_id>\d+)/add_achievement/$', views.AddNewAchievementView.as_view()),
+    url(r'^profiles/(?P<user_id>\d+)/buy_pin/$', views.BuyPinView.as_view()),
+    url(r'^profiles/(?P<user_id>\d+)/update_rating/$', views.ChangeRatingView.as_view()),
 ]
