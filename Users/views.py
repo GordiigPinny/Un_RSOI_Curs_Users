@@ -151,6 +151,7 @@ class ChangeRatingView(APIView, CollectStatsMixin):
             return Response({'error': 'Необходимо указать d_rating'}, status=400)
 
         profile.update_rating(d_rating)
+        profile.money += 100
         s = ProfileSerializer(instance=profile)
         return Response(s.data, status=202)
 
