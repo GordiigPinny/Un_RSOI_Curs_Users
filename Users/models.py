@@ -13,7 +13,7 @@ class Profile(models.Model):
     created_dt = models.DateTimeField(auto_now_add=True)
     pin_sprite = models.PositiveIntegerField(default=1, null=False)
     geopin_sprite = models.PositiveIntegerField(default=2, null=False)
-    unlocked_pins = models.TextField(blank=True, null=False, default='1',
+    unlocked_pins = models.TextField(blank=True, null=False, default='1,2',
                                      validators=[validate_comma_separated_integer_list])
     achievements = models.TextField(blank=True, null=False, default='1',
                                     validators=[validate_comma_separated_integer_list])
